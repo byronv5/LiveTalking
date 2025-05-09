@@ -5,182 +5,264 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>WebRTC webcam</title>
     <style>
-    button {
-        padding: 8px 16px;
+    html, body {
+        width: 100vw;
+        height: 100vh;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background: #000;
     }
-
-    video {
-        width: 100%;
-    }
-
-    .option {
-        margin-bottom: 8px;
-    }
-
     #media {
-        max-width: 1280px;
+        width: 100vw;
+        height: 100vh;
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 1;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: #000;
+    }
+    video {
+        width: 100vw;
+        height: 100vh;
+        object-fit: cover;
+        background: #000;
+        display: block;
+    }
+    #startButton {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        padding: 20px 40px;
+        font-size: 30px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        z-index: 1000;
+    }
+    #startButton:hover {
+        background-color: #2b6169;
+    }
+    /* Chat container styles */
+    #chat-container {
+        position: fixed;
+        bottom: 32px;
+        left: 0;
+        width: 100vw;
+        height: 25vh;
+        max-height: 25vh;
+        overflow-y: auto;
+        pointer-events: auto;
+        background: transparent;
+        box-shadow: none;
+        z-index: 10;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        padding: 0;
+    }
+    .chat-message {
+        display: flex;
+        margin: 4px 16px;
+        pointer-events: auto;
+    }
+    .chat-message.user {
+        justify-content: flex-end;
+    }
+    .chat-message.bot {
+        justify-content: flex-start;
+        align-self: flex-start;
+    }
+    .chat-bubble {
+        max-width: 70vw;
+        padding: 10px 16px;
+        border-radius: 18px;
+        font-size: 18px;
+        line-height: 1.5;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        word-break: break-word;
+        background: rgba(255,255,255,0.7);
+        color: #222;
+        margin-bottom: 2px;
+        backdrop-filter: blur(2px);
+    }
+    .chat-message.user .chat-bubble {
+        background: rgba(76,175,80,0.85);
+        color: #fff;
+        border-bottom-right-radius: 4px;
+        align-self: flex-end;
+    }
+    .chat-message.bot .chat-bubble {
+        background: rgba(255,255,255,0.7);
+        color: #222;
+        border-bottom-left-radius: 4px;
+        align-self: flex-start;
+    }
+    /* 清除按钮样式 */
+    #clearChatBtn {
+        position: absolute;
+        top: 8px;
+        right: 16px;
+        width: 32px;
+        height: 32px;
+        background: rgba(255,255,255,0.5);
+        border: none;
+        border-radius: 50%;
+        cursor: pointer;
+        z-index: 20;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    #clearChatBtn:hover {
+        background: rgba(76,175,80,0.85);
+    }
+    #clearChatBtn svg {
+        width: 20px;
+        height: 20px;
+        fill: #222;
+        pointer-events: none;
+    }
+    #clearChatBtn:hover svg {
+        fill: #fff;
     }
     </style>
 </head>
 <body>
 
-<div class="option">
-    <input id="use-stun" type="checkbox"/>
-    <label for="use-stun">Use STUN server</label>
-</div>
-<button id="start" onclick="start()">Start</button>
-<button id="stop" style="display: none" onclick="stop()">Stop</button>
-<button class="btn btn-primary" id="btn_start_record">Start Recording</button>
-<button class="btn btn-primary" id="btn_stop_record" disabled>Stop Recording</button>
-<!-- <button class="btn btn-primary" id="btn_download">Download Video</button> -->
 <input type="hidden" id="sessionid" value="0">
-<form class="form-inline" id="echo-form">
-    <div class="form-group">
-      <p>input text</p>
-
-      <textarea cols="2" rows="3" style="width:600px;height:50px;" class="form-control" id="message">test</textarea>
-    </div>
-    <button type="submit" class="btn btn-default">Send</button>
-  </form>
 
 <div id="media">
-    <h2>Media</h2>
-
     <audio id="audio" autoplay="true"></audio>
-    <video id="video" style="width:600px;" autoplay="true" playsinline="true"></video>
+    <video id="video" autoplay="true" playsinline="true"></video>
+</div>
+
+<button id="startButton">开始</button>
+
+<!-- Chat container -->
+<div id="chat-container">
+    <button id="clearChatBtn" title="清除会话">
+        <svg viewBox="0 0 24 24"><path d="M12 4V1m0 3c-4.418 0-8 3.582-8 8s3.582 8 8 8 8-3.582 8-8m-8 8v3m0-3c4.418 0 8-3.582 8-8" stroke="#222" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 4l16 16" stroke="#222" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+    </button>
 </div>
 
 <script src="client.js"></script>
 <script type="text/javascript" src="http://cdn.sockjs.org/sockjs-0.3.4.js"></script>
 <script type="text/javascript" src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+<script type="text/javascript" src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 </body>
 <script type="text/javascript" charset="utf-8">
+    // 聊天显示函数
+    function appendChatMessage(role, text) {
+        const chatContainer = document.getElementById('chat-container');
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'chat-message ' + (role === 'user' ? 'user' : 'bot');
+        const bubble = document.createElement('div');
+        bubble.className = 'chat-bubble';
+        bubble.textContent = text;
+        msgDiv.appendChild(bubble);
+        chatContainer.appendChild(msgDiv);
+        // 滚动到底部
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
 
-	$(document).ready(function() {
-	  // var host = window.location.hostname
-	  // var ws = new WebSocket("ws://"+host+":8000/humanecho");
-	  // //document.getElementsByTagName("video")[0].setAttribute("src", aa["video"]);
-	  // ws.onopen = function() {
-		// console.log('Connected');
-	  // };
-	  // ws.onmessage = function(e) {
-		// console.log('Received: ' + e.data);
-		// data = e
-		// var vid = JSON.parse(data.data); 
-		// console.log(typeof(vid),vid)
-		// //document.getElementsByTagName("video")[0].setAttribute("src", vid["video"]);
-		
-	  // };
-	  // ws.onclose = function(e) {
-		// console.log('Closed');
-	  // };
+    // 清除聊天内容
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('clearChatBtn').onclick = function(e) {
+            e.stopPropagation();
+            const chatContainer = document.getElementById('chat-container');
+            // 只保留清除按钮本身
+            chatContainer.innerHTML = '';
+            chatContainer.appendChild(this);
+        };
+    });
 
-	  $('#echo-form').on('submit', function(e) {
-      e.preventDefault();
-      var message = $('#message').val();
-      console.log('Sending: ' + message);
-      console.log('sessionid: ',document.getElementById('sessionid').value);
-      fetch('/human', {
-            body: JSON.stringify({
-                text: message,
-                type: 'echo',
-                interrupt: true,
-                sessionid:parseInt(document.getElementById('sessionid').value),
-            }),
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            method: 'POST'
-      });
-      //ws.send(message);
-      $('#message').val('');
-	  });
+    // 发送状态消息到MQTT
+    function sendStatusMessage(client, requestId, status) {
+        client.publish('llm/show_res', JSON.stringify({
+            requestId: requestId,
+            status: status
+        }));
+    }
 
-    $('#btn_start_record').click(function() {
-        // 开始录制
-        console.log('Starting recording...');
-        fetch('/record', {
-            body: JSON.stringify({
-                    type: 'start_record',
-                    sessionid:parseInt(document.getElementById('sessionid').value),
+    // 处理数字人说话请求
+    async function handleDigitalHumanSpeak(text, sessionId, requestId, client) {
+        try {
+            const response = await fetch('/human', {
+                body: JSON.stringify({
+                    text: text,
+                    type: 'echo',
+                    interrupt: true,
+                    sessionid: sessionId,
                 }),
                 headers: {
                     'Content-Type': 'application/json'
                 },
-            method: 'POST'
-        }).then(function(response) {
-            if (response.ok) {
-                console.log('Recording started.');
-                $('#btn_start_record').prop('disabled', true);
-                $('#btn_stop_record').prop('disabled', false);
-                // $('#btn_download').prop('disabled', true);
-            } else {
-                console.error('Failed to start recording.');
-            }
-        }).catch(function(error) {
+                method: 'POST'
+            });
+            sendStatusMessage(client, requestId, response.ok);
+        } catch (error) {
             console.error('Error:', error);
+            sendStatusMessage(client, requestId, false);
+        }
+    }
+
+    // 处理MQTT消息
+    function handleMqttMessage(topic, message, client) {
+        if (topic != 'llm/show') return;
+        try {
+            const payload = JSON.parse(message.toString());
+            if(!payload.text) return;
+            if (payload.command === 'CHAT_ASK') {
+                appendChatMessage('user', payload.text);
+            } else if (payload.command === 'CHAT_RESP') {
+                appendChatMessage('bot', payload.text);
+                const sessionId = parseInt(document.getElementById('sessionid').value);
+                handleDigitalHumanSpeak(payload.text, sessionId, payload.requestId, client);
+            } else {
+                sendStatusMessage(client, payload.requestId, true);
+            }
+        } catch (e) {
+            console.error('Error parsing MQTT message:', e);
+        }
+    }
+
+    // 初始化MQTT连接
+    function initMqtt() {
+        const client = mqtt.connect('ws://localhost:8083', {
+            clientId: 'web_' + Math.random().toString(16).substr(2, 8),
+            clean: true,
+            connectTimeout: 4000,
+            reconnectPeriod: 1000,
+            protocol: 'ws'
+        });
+        client.on('connect', () => {
+            console.log('Connected to MQTT broker');
+            client.subscribe('llm/show');
+        });
+        client.on('message', (topic, message) => handleMqttMessage(topic, message, client));
+        client.on('error', (err) => console.error('MQTT Error:', err));
+        return client;
+    }
+
+    // 页面加载完成后初始化
+    $(document).ready(function() {
+        // 初始化MQTT
+        const client = initMqtt();
+        // 监听开始按钮点击事件
+        $('#startButton').click(function() {
+            start();
+            // 隐藏开始按钮
+            $(this).hide();
         });
     });
-
-    $('#btn_stop_record').click(function() {
-        // 结束录制
-        console.log('Stopping recording...');
-        fetch('/record', {
-            body: JSON.stringify({
-                    type: 'end_record',
-                    sessionid:parseInt(document.getElementById('sessionid').value),
-                }),
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-            method: 'POST'
-        }).then(function(response) {
-            if (response.ok) {
-                console.log('Recording stopped.');
-                $('#btn_start_record').prop('disabled', false);
-                $('#btn_stop_record').prop('disabled', true);
-                // $('#btn_download').prop('disabled', false);
-            } else {
-                console.error('Failed to stop recording.');
-            }
-        }).catch(function(error) {
-            console.error('Error:', error);
-        });
-    });
-
-    // $('#btn_download').click(function() {
-    //     // 下载视频文件
-    //     console.log('Downloading video...');
-    //     fetch('/record_lasted.mp4', {
-    //         method: 'GET'
-    //     }).then(function(response) {
-    //         if (response.ok) {
-    //             return response.blob();
-    //         } else {
-    //             throw new Error('Failed to download the video.');
-    //         }
-    //     }).then(function(blob) {
-    //         // 创建一个 Blob 对象
-    //         const url = window.URL.createObjectURL(blob);
-    //         // 创建一个隐藏的可下载链接
-    //         const a = document.createElement('a');
-    //         a.style.display = 'none';
-    //         a.href = url;
-    //         a.download = 'record_lasted.mp4';
-    //         document.body.appendChild(a);
-    //         // 触发下载
-    //         a.click();
-    //         // 清理
-    //         window.URL.revokeObjectURL(url);
-    //         document.body.removeChild(a);
-    //         console.log('Video downloaded successfully.');
-    //     }).catch(function(error) {
-    //         console.error('Error:', error);
-    //     });
-    // });
-
-	});
-
-  
 </script>
 </html>

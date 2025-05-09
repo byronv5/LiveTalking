@@ -111,6 +111,13 @@ async def offer(request):
     player = HumanPlayer(nerfreals[sessionid])
     audio_sender = pc.addTrack(player.audio)
     video_sender = pc.addTrack(player.video)
+
+    @pc.on("datachannel")
+    def on_datachannel(channel):
+        print("DataChannel received:", channel.label)
+        if channel.label == "statusChannel":
+            player.status_channel = channel  # 只保存 statusChannel
+
     capabilities = RTCRtpSender.getCapabilities("video")
     preferences = list(filter(lambda x: x.name == "H264", capabilities.codecs))
     preferences += list(filter(lambda x: x.name == "VP8", capabilities.codecs))

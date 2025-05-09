@@ -177,9 +177,13 @@ class HumanPlayer:
         self.__video = PlayerStreamTrack(self, kind="video")
 
         self.__container = nerfreal
+        self.status_channel = None
 
     def notify(self,eventpoint):
         self.__container.notify(eventpoint)
+        # 推送数字人状态到前端：start开始；end结束
+        if self.status_channel and self.status_channel.readyState == "open":
+             self.status_channel.send(json.dumps(eventpoint))
 
     @property
     def audio(self) -> MediaStreamTrack:

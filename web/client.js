@@ -3,6 +3,19 @@ var pc = null;
 function negotiate() {
     pc.addTransceiver('video', { direction: 'recvonly' });
     pc.addTransceiver('audio', { direction: 'recvonly' });
+    // 创建 DataChannel
+    const dataChannel = pc.createDataChannel('statusChannel');
+    // 监听 DataChannel 事件
+    dataChannel.onopen = function() {
+        console.log('DataChannel 已打开');
+    };
+    // 监听数字人状态
+    dataChannel.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+        // data：{status: 'start', text: '你好', msgenvent: null}
+        // start：开始播放；end：结束播报
+    };
+
     return pc.createOffer().then((offer) => {
         return pc.setLocalDescription(offer);
     }).then(() => {
@@ -47,10 +60,6 @@ function start() {
         sdpSemantics: 'unified-plan'
     };
 
-    if (document.getElementById('use-stun').checked) {
-        config.iceServers = [{ urls: ['stun:stun.l.google.com:19302'] }];
-    }
-
     pc = new RTCPeerConnection(config);
 
     // connect audio / video
@@ -62,14 +71,10 @@ function start() {
         }
     });
 
-    document.getElementById('start').style.display = 'none';
     negotiate();
-    document.getElementById('stop').style.display = 'inline-block';
 }
 
 function stop() {
-    document.getElementById('stop').style.display = 'none';
-
     // close peer connection
     setTimeout(() => {
         pc.close();
@@ -84,14 +89,14 @@ window.onunload = function(event) {
 };
 
 window.onbeforeunload = function (e) {
-        setTimeout(() => {
-                pc.close();
-            }, 500);
-        e = e || window.event
-        // 兼容IE8和Firefox 4之前的版本
-        if (e) {
-          e.returnValue = '关闭提示'
-        }
-        // Chrome, Safari, Firefox 4+, Opera 12+ , IE 9+
-        return '关闭提示'
-      }
+    setTimeout(() => {
+            pc.close();
+        }, 500);
+    e = e || window.event
+    // 兼容IE8和Firefox 4之前的版本
+    if (e) {
+        e.returnValue = '关闭提示'
+    }
+    // Chrome, Safari, Firefox 4+, Opera 12+ , IE 9+
+    return '关闭提示'
+}
