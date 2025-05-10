@@ -12,8 +12,19 @@ function negotiate() {
     // 监听数字人状态
     dataChannel.onmessage = function(event) {
         const data = JSON.parse(event.data);
-        // data：{status: 'start', text: '你好', msgenvent: null}
+        // data结构：{status: 'start', text: '你好', msgenvent: null}
         // start：开始播放；end：结束播报
+        if (data.status === 'start') {
+            // 只有在非移动状态下才隐藏 loading
+            if (!stateContext.isMoving) {
+                loading.hide();
+            }
+            // 播报开始
+            appendChatMessage('bot', data.text);
+        }
+        if (data.status === 'end') {
+            sendStatusMessage(true);
+        }
     };
 
     return pc.createOffer().then((offer) => {
@@ -48,7 +59,7 @@ function negotiate() {
     }).then((response) => {
         return response.json();
     }).then((answer) => {
-        document.getElementById('sessionid').value = answer.sessionid
+        document.getElementById('sessionid').value = answer.sessionid;
         return pc.setRemoteDescription(answer);
     }).catch((e) => {
         alert(e);

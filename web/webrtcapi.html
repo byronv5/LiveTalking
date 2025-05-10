@@ -135,17 +135,65 @@
         fill: #fff;
     }
     </style>
+    <style>
+        /* Loading 容器样式 */
+        .loading-container {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: none; /* 默认隐藏 */
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        /* 动态圆形加载样式 */
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(236, 231, 231, 0.904);
+            border-top: 5px solid #2a7284;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        /* 动态文字样式 */
+        .loading-text {
+            margin-top: 10px;
+            font-size: 16px;
+            color: #3a5548;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        /* 动画效果 */
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
 </head>
 <body>
 
 <input type="hidden" id="sessionid" value="0">
+
+<div id="loading" class="loading-container">
+    <div class="loading-spinner"></div>
+    <div class="loading-text"></div>
+</div>
 
 <div id="media">
     <audio id="audio" autoplay="true"></audio>
     <video id="video" autoplay="true" playsinline="true"></video>
 </div>
 
-<button id="startButton">开始</button>
+<button id="startButton">启动小白</button>
 
 <!-- Chat container -->
 <div id="chat-container">
@@ -155,12 +203,31 @@
 </div>
 
 <script src="client.js"></script>
+<script src="states.js"></script>
 <script type="text/javascript" src="http://cdn.sockjs.org/sockjs-0.3.4.js"></script>
 <script type="text/javascript" src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
 <script type="text/javascript" src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 </body>
 <script type="text/javascript" charset="utf-8">
-    // 聊天显示函数
+    var client = null;// MQTT客户端
+    var requestId = null;// MQ请求ID
+    const stateContext = new StateContext();// 状态上下文
+
+    const loading = {
+        display: function(text) {
+            const loadingContainer = document.getElementById('loading');
+            const loadingText = loadingContainer.querySelector('.loading-text');
+            loadingText.textContent = text || '加载中...'; // 设置显示的文字
+            loadingContainer.style.display = 'flex'; // 显示加载动画
+        },
+        hide: function() {
+            const loadingContainer = document.getElementById('loading');
+            loadingContainer.style.display = 'none'; // 隐藏加载动画
+        }
+    };
+
+
+    // 聊天窗口
     function appendChatMessage(role, text) {
         const chatContainer = document.getElementById('chat-container');
         const msgDiv = document.createElement('div');
@@ -174,7 +241,7 @@
         chatContainer.scrollTop = chatContainer.scrollHeight;
     }
 
-    // 清除聊天内容
+    // 清除聊天窗口内容
     document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('clearChatBtn').onclick = function(e) {
             e.stopPropagation();
@@ -185,51 +252,46 @@
         };
     });
 
-    // 发送状态消息到MQTT
-    function sendStatusMessage(client, requestId, status) {
-        client.publish('llm/show_res', JSON.stringify({
+    // 发送MQ回执
+    function sendStatusMessage(status) {
+        const message = JSON.stringify({
             requestId: requestId,
             status: status
-        }));
+        });
+        console.log('Publishing message:', message, 'to topic: llm/show_res');
+        client.publish('llm/show_res', message);
     }
 
-    // 处理数字人说话请求
-    async function handleDigitalHumanSpeak(text, sessionId, requestId, client) {
+    // 驱动数字人说话
+    async function handleDigitalHumanSpeak(text) {
         try {
             const response = await fetch('/human', {
                 body: JSON.stringify({
                     text: text,
                     type: 'echo',
                     interrupt: true,
-                    sessionid: sessionId,
+                    sessionid: parseInt(document.getElementById('sessionid').value)
                 }),
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 method: 'POST'
             });
-            sendStatusMessage(client, requestId, response.ok);
         } catch (error) {
             console.error('Error:', error);
-            sendStatusMessage(client, requestId, false);
+            sendStatusMessage(false);
         }
     }
 
-    // 处理MQTT消息
-    function handleMqttMessage(topic, message, client) {
-        if (topic != 'llm/show') return;
-        try {
+    // MQ订阅消息处理
+    function handleMqttMessage(topic, message) {
+        console.log('Received message:', message.toString(), 'on topic:', topic);
+        if (topic != 'llm/show') return;       
+        try {                          
             const payload = JSON.parse(message.toString());
             if(!payload.text) return;
-            if (payload.command === 'CHAT_ASK') {
-                appendChatMessage('user', payload.text);
-            } else if (payload.command === 'CHAT_RESP') {
-                appendChatMessage('bot', payload.text);
-                const sessionId = parseInt(document.getElementById('sessionid').value);
-                handleDigitalHumanSpeak(payload.text, sessionId, payload.requestId, client);
-            } else {
-                sendStatusMessage(client, payload.requestId, true);
-            }
+            requestId = payload.requestId;
+            stateContext.handleState(payload);         
         } catch (e) {
             console.error('Error parsing MQTT message:', e);
         }
@@ -253,11 +315,10 @@
         return client;
     }
 
-    // 页面加载完成后初始化
     $(document).ready(function() {
         // 初始化MQTT
-        const client = initMqtt();
-        // 监听开始按钮点击事件
+        client = initMqtt();
+        // 点击开始
         $('#startButton').click(function() {
             start();
             // 隐藏开始按钮
