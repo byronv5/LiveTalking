@@ -9,7 +9,8 @@ class State {
 class TaskAwakeState extends State {
     do_next(text) {
         appendChatMessage('user', text);
-        handleDigitalHumanSpeak("你好，我是你的医疗助手小白，请问有什么可以帮到您的？");
+        loading.display('思考中...');
+        handleDigitalHumanSpeak("你好，我是你的医疗助手小白，请问有什么可以帮到您的？");     
     }
 }
 
@@ -48,7 +49,7 @@ class ChatRespState extends State {
 
 class TaskListeningState extends State {
     do_next(text) {
-        loading.display('正在听...');
+        // loading.display('正在听...');
     }
 }
 
@@ -75,6 +76,7 @@ class FocusStandbyState extends State {
 class StateContext {
     constructor() {
         this.isMoving = false;
+        this.isSaying = false;
         this.states = {
             TASK_AWAKE: new TaskAwakeState(),
             TASK_MOVE: new TaskMoveState(),
@@ -82,7 +84,7 @@ class StateContext {
             TASK_COMPLETE: new TaskCompleteState(),
             CHAT_ASK: new ChatAskState(),
             CHAT_RESP: new ChatRespState(),
-            TASK_LISTENING: new TaskListeningState(),
+            // TASK_LISTENING: new TaskListeningState(),
             TASK_SLEEPING: new TaskSleepingState(),
             FOCUS_AWAKE: new FocusAwakeState(),
             FOCUS_STANDBY: new FocusStandbyState(),
@@ -91,7 +93,8 @@ class StateContext {
 
     handleState(payload) {
         const state = this.states[payload.command];
-        this.isMoving = payload.command === 'TASK_MOVE' || payload.command === 'TASK_DIRECT';    
+        this.isMoving = payload.command === 'TASK_MOVE' || payload.command === 'TASK_DIRECT';
+        this.isSaying = payload.command === 'TASK_LISTENING' || payload.command === 'TASK_AWAKE' || payload.command === 'CHAT_RESP' || payload.command === 'TASK_COMPLETE';
         state.do_next(payload.text);
     }
 }

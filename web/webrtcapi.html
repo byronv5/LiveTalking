@@ -237,8 +237,11 @@
         bubble.textContent = text;
         msgDiv.appendChild(bubble);
         chatContainer.appendChild(msgDiv);
-        // 滚动到底部
+        // 滚动到底部d
         chatContainer.scrollTop = chatContainer.scrollHeight;
+        if(role === 'user') {
+            sendStatusMessage(false);
+        }
     }
 
     // 清除聊天窗口内容
@@ -259,7 +262,7 @@
             status: status
         });
         console.log('Publishing message:', message, 'to topic: llm/show_res');
-        client.publish('llm/show_res', message);
+        client.publish('llm/show_res', message, { qos: 2 });
     }
 
     // 驱动数字人说话
@@ -290,7 +293,12 @@
         try {                          
             const payload = JSON.parse(message.toString());
             if(!payload.text) return;
-            requestId = payload.requestId;
+            // 检查状态是否存在
+            if (!stateContext.states[payload.command]) {
+                console.log('Unknown state command:', payload.command);
+                return;
+            }
+            requestId = payload.requestId;           
             stateContext.handleState(payload);         
         } catch (e) {
             console.error('Error parsing MQTT message:', e);
@@ -308,21 +316,21 @@
         });
         client.on('connect', () => {
             console.log('Connected to MQTT broker');
-            client.subscribe('llm/show');
+            client.subscribe('llm/show', { qos: 2 });
         });
         client.on('message', (topic, message) => handleMqttMessage(topic, message, client));
         client.on('error', (err) => console.error('MQTT Error:', err));
         return client;
     }
 
-    $(document).ready(function() {
-        // 初始化MQTT
+    $(document).ready(function() {              // 初始化MQTT
         client = initMqtt();
         // 点击开始
         $('#startButton').click(function() {
             start();
             // 隐藏开始按钮
             $(this).hide();
+            loading.display('正在听...');
         });
     });
 </script>

@@ -23,7 +23,10 @@ function negotiate() {
             appendChatMessage('bot', data.text);
         }
         if (data.status === 'end') {
-            sendStatusMessage(true);
+            sendStatusMessage(!stateContext.isMoving);           
+            if (stateContext.isSaying) {
+                loading.display('正在听...');
+            }
         }
     };
 
