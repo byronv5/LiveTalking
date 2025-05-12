@@ -1,7 +1,7 @@
 [
    {
-        "audiotype":1, 
+        "audiotype":2, 
         "imgpath":"data/customvideo/image", 
-        "audiopath":"data/customvideo/xiaobai.mp4"
+        "audiopath":"data/customvideo/audio.wav"
     }
 ]
