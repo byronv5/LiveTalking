@@ -56,6 +56,7 @@ class TaskListeningState extends State {
 class TaskSleepingState extends State {
     do_next(text) {
         loading.display('休眠中...');
+        clearChatContainer();
     }
 }
 
@@ -69,6 +70,7 @@ class FocusStandbyState extends State {
     do_next(text) {
         handleDigitalHumanSpeak(text);
         loading.display('休眠中...');
+        clearChatContainer();
     }
 }
 

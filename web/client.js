@@ -21,12 +21,16 @@ function negotiate() {
             }
             // 播报开始
             appendChatMessage('bot', data.text);
+             // 激活打断按钮
+            document.getElementById('interruptBtn').disabled = false;
         }
         if (data.status === 'end') {
             sendStatusMessage(!stateContext.isMoving);           
             if (stateContext.isSaying) {
                 loading.display('正在听...');
             }
+            // 禁用打断按钮
+            document.getElementById('interruptBtn').disabled = true;
         }
     };
 

@@ -5,138 +5,178 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>WebRTC webcam</title>
     <style>
-    html, body {
-        width: 100vw;
-        height: 100vh;
-        margin: 0;
-        padding: 0;
-        overflow: hidden;
-        background: #000;
-    }
-    #media {
-        width: 100vw;
-        height: 100vh;
-        position: fixed;
-        top: 0;
-        left: 0;
-        z-index: 1;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        background: #000;
-    }
-    video {
-        width: 100vw;
-        height: 100vh;
-        object-fit: cover;
-        background: #000;
-        display: block;
-    }
-    #startButton {
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        padding: 20px 40px;
-        font-size: 30px;
-        background-color: #4CAF50;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        z-index: 1000;
-    }
-    #startButton:hover {
-        background-color: #2b6169;
-    }
-    /* Chat container styles */
-    #chat-container {
-        position: fixed;
-        bottom: 32px;
-        left: 0;
-        width: 100vw;
-        height: 25vh;
-        max-height: 25vh;
-        overflow-y: auto;
-        pointer-events: auto;
-        background: transparent;
-        box-shadow: none;
-        z-index: 10;
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-        padding: 0;
-    }
-    .chat-message {
-        display: flex;
-        margin: 4px 16px;
-        pointer-events: auto;
-    }
-    .chat-message.user {
-        justify-content: flex-end;
-    }
-    .chat-message.bot {
-        justify-content: flex-start;
-        align-self: flex-start;
-    }
-    .chat-bubble {
-        max-width: 70vw;
-        padding: 10px 16px;
-        border-radius: 18px;
-        font-size: 18px;
-        line-height: 1.5;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-        word-break: break-word;
-        background: rgba(255,255,255,0.7);
-        color: #222;
-        margin-bottom: 2px;
-        backdrop-filter: blur(2px);
-    }
-    .chat-message.user .chat-bubble {
-        background: rgba(76,175,80,0.85);
-        color: #fff;
-        border-bottom-right-radius: 4px;
-        align-self: flex-end;
-    }
-    .chat-message.bot .chat-bubble {
-        background: rgba(255,255,255,0.7);
-        color: #222;
-        border-bottom-left-radius: 4px;
-        align-self: flex-start;
-    }
-    /* 清除按钮样式 */
-    #clearChatBtn {
-        position: absolute;
-        top: 8px;
-        right: 16px;
-        width: 32px;
-        height: 32px;
-        background: rgba(255,255,255,0.5);
-        border: none;
-        border-radius: 50%;
-        cursor: pointer;
-        z-index: 20;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: background 0.2s;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    }
-    #clearChatBtn:hover {
-        background: rgba(76,175,80,0.85);
-    }
-    #clearChatBtn svg {
-        width: 20px;
-        height: 20px;
-        fill: #222;
-        pointer-events: none;
-    }
-    #clearChatBtn:hover svg {
-        fill: #fff;
-    }
+        html, body {
+            width: 100vw;
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #000;
+        }
+        #media {
+            width: 100vw;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #000;
+        }
+        video {
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+            background: #000;
+            display: block;
+        }
+        #startButton {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px 40px;
+            font-size: 30px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 1000;
+        }
+        #startButton:hover {
+            background-color: #2b6169;
+        }       
     </style>
+    <!-- Chat container styles -->
     <style>
-        /* Loading 容器样式 */
+       
+        #chat-container {
+            position: fixed;
+            bottom: 32px;
+            left: 0;
+            width: 100vw;
+            height: 25vh;
+            max-height: 25vh;
+            overflow-y: auto;
+            pointer-events: auto;
+            background: transparent;
+            box-shadow: none;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            padding: 0;
+        }
+        .chat-message {
+            display: flex;
+            margin: 4px 16px;
+            pointer-events: auto;
+        }
+        .chat-message.user {
+            justify-content: flex-end;
+        }
+        .chat-message.bot {
+            justify-content: flex-start;
+            align-self: flex-start;
+        }
+        .chat-bubble {
+            max-width: 70vw;
+            padding: 10px 16px;
+            border-radius: 18px;
+            font-size: 18px;
+            line-height: 1.5;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            word-break: break-word;
+            background: rgba(255,255,255,0.7);
+            color: #222;
+            margin-bottom: 2px;
+            backdrop-filter: blur(2px);
+        }
+        .chat-message.user .chat-bubble {
+            background: rgba(76,175,80,0.85);
+            color: #fff;
+            border-bottom-right-radius: 4px;
+            align-self: flex-end;
+        }
+        .chat-message.bot .chat-bubble {
+            background: rgba(255,255,255,0.7);
+            color: #222;
+            border-bottom-left-radius: 4px;
+            align-self: flex-start;
+        }
+        /* 按钮容器样式 */
+        .chat-buttons {
+            position: fixed;
+            top: 8px;
+            right: 16px;
+            z-index: 20;
+            display: flex;
+            gap: 8px;
+        }
+        /* 清除按钮样式 */
+        #clearChatBtn {
+            width: 32px;
+            height: 32px;
+            background: rgba(255,255,255,0.5);
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        #interruptBtn {
+            width: 32px;
+            height: 32px;
+            background: rgba(255,255,255,0.5);
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        #clearChatBtn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: rgba(255,255,255,0.3);
+        }
+        #clearChatBtn:disabled svg {
+            fill: #999;
+        }
+        #clearChatBtn:not(:disabled):hover {
+            background: rgba(76,175,80,0.85);
+        }
+        #clearChatBtn:not(:disabled):hover svg {
+            fill: #fff;
+        }
+        #interruptBtn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: rgba(255,255,255,0.3);
+        }
+
+        #interruptBtn:disabled svg {
+            fill: #999;
+        }
+
+        #interruptBtn:not(:disabled):hover {
+            background: rgba(255, 59, 48, 0.85);
+        }
+
+        #interruptBtn:not(:disabled):hover svg {
+            fill: #fff;
+        }
+    </style>
+    <!-- Loading 容器样式 -->
+    <style>      
         .loading-container {
             position: fixed;
             top: 50%;
@@ -197,11 +237,19 @@
 
 <!-- Chat container -->
 <div id="chat-container">
-    <button id="clearChatBtn" title="清除会话">
-        <svg viewBox="0 0 24 24"><path d="M12 4V1m0 3c-4.418 0-8 3.582-8 8s3.582 8 8 8 8-3.582 8-8m-8 8v3m0-3c4.418 0 8-3.582 8-8" stroke="#222" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 4l16 16" stroke="#222" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
-    </button>
+    <div class="chat-buttons">
+        <button id="clearChatBtn" title="清除会话" disabled>
+            <svg viewBox="0 0 24 24"><path d="M12 4V1m0 3c-4.418 0-8 3.582-8 8s3.582 8 8 8 8-3.582 8-8m-8 8v3m0-3c4.418 0 8-3.582 8-8" stroke="#222" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 4l16 16" stroke="#222" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+        </button>
+        <button id="interruptBtn" title="打断说话" disabled>
+            <svg viewBox="0 0 24 24">
+                <rect x="6" y="6" width="12" height="12" fill="#222" rx="2"/>
+            </svg>
+        </button>
+    </div>
 </div>
 
+<script src="logger.js"></script>
 <script src="client.js"></script>
 <script src="states.js"></script>
 <script type="text/javascript" src="http://cdn.sockjs.org/sockjs-0.3.4.js"></script>
@@ -237,8 +285,10 @@
         bubble.textContent = text;
         msgDiv.appendChild(bubble);
         chatContainer.appendChild(msgDiv);
-        // 滚动到底部d
+        // 滚动到底部
         chatContainer.scrollTop = chatContainer.scrollHeight;
+        // 启用清除按钮
+        document.getElementById('clearChatBtn').disabled = false;
         if(role === 'user') {
             sendStatusMessage(false);
         }
@@ -248,12 +298,21 @@
     document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('clearChatBtn').onclick = function(e) {
             e.stopPropagation();
-            const chatContainer = document.getElementById('chat-container');
-            // 只保留清除按钮本身
-            chatContainer.innerHTML = '';
-            chatContainer.appendChild(this);
+            clearChatContainer();
+        };
+        document.getElementById('interruptBtn').onclick = function(e) {
+            e.stopPropagation();
+            interruptDigitalHumanSpeak();
         };
     });
+    function clearChatContainer() {
+        const chatContainer = document.getElementById('chat-container');
+        const chatButtons = document.querySelector('.chat-buttons');
+        chatContainer.innerHTML = '';
+        chatContainer.appendChild(chatButtons);
+        // 禁用清除按钮
+        document.getElementById('clearChatBtn').disabled = true;
+    }
 
     // 发送MQ回执
     function sendStatusMessage(status) {
@@ -283,6 +342,31 @@
         } catch (error) {
             console.error('Error:', error);
             sendStatusMessage(false);
+        }
+    }
+
+    // 打断驱动数字人说话
+    async function interruptDigitalHumanSpeak() {
+        try {
+            const response = await fetch('/human', {
+                body: JSON.stringify({
+                    type: 'interrupt',
+                    interrupt: true,
+                    sessionid: parseInt(document.getElementById('sessionid').value)
+                }),
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                method: 'POST'
+            });
+            if (response.ok) {
+                sendStatusMessage(true);
+                // 禁用打断按钮
+                document.getElementById('interruptBtn').disabled = true;
+                loading.display('正在听...');
+            }
+        } catch (error) {
+            console.error('Error:', error);
         }
     }
 
@@ -330,7 +414,7 @@
             start();
             // 隐藏开始按钮
             $(this).hide();
-            loading.display('正在听...');
+            loading.display('请说【你好小白】唤醒');
         });
     });
 </script>
