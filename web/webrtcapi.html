@@ -327,6 +327,15 @@
     // 驱动数字人说话
     async function handleDigitalHumanSpeak(text) {
         try {
+            // 启动音频播放
+            const audioElement = document.getElementById('audio');
+            const audioTracks = audioElement.srcObject?.getAudioTracks();
+            if (audioTracks) {
+                audioTracks.forEach(track => {
+                    track.enabled = true;
+                });
+            }
+            
             const response = await fetch('/human', {
                 body: JSON.stringify({
                     text: text,
@@ -348,6 +357,15 @@
     // 打断驱动数字人说话
     async function interruptDigitalHumanSpeak() {
         try {
+            // 立即停止音频播放
+            const audioElement = document.getElementById('audio');
+            const audioTracks = audioElement.srcObject?.getAudioTracks();
+            if (audioTracks) {
+                audioTracks.forEach(track => {
+                    track.enabled = false;
+                });
+            }
+            
             const response = await fetch('/human', {
                 body: JSON.stringify({
                     type: 'interrupt',

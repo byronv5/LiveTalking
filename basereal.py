@@ -49,6 +49,8 @@ def read_imgs(img_list):
 
 class BaseReal:
     def __init__(self, opt):
+        logger.info(f"BaseReal init with opt: {opt}")
+        logger.info(f"opt.tts: {opt.tts}")
         self.opt = opt
         self.sample_rate = 16000
         self.chunk = self.sample_rate // opt.fps # 320 samples per chunk (20ms * 16000 / 1000)
@@ -66,6 +68,8 @@ class BaseReal:
             self.tts = FishTTS(opt,self)
         elif opt.tts == "tencent":
             self.tts = TencentTTS(opt,self)
+        else:
+            logger.error(f"Unknown tts type: {opt.tts}")
         
         self.speaking = False
 
