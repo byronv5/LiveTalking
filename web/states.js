@@ -37,7 +37,7 @@ class TaskCompleteState extends State {
 class ChatAskState extends State {
     do_next(text) {
         appendChatMessage('user', text);
-        loading.display('思考中...');
+        statusDisplay.showThinking();
     }
 }
 

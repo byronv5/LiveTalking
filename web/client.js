@@ -19,6 +19,7 @@ function negotiate() {
             if (!stateContext.isMoving) {
                 loading.hide();
             }
+            statusDisplay.hideAll();
             // 播报开始
             appendChatMessage('bot', data.text);
              // 激活打断按钮
@@ -27,7 +28,7 @@ function negotiate() {
         if (data.status === 'end') {
             sendStatusMessage(!stateContext.isMoving);           
             if (stateContext.isSaying) {
-                loading.display('正在听...');
+                statusDisplay.showListening();
             }
             // 禁用打断按钮
             document.getElementById('interruptBtn').disabled = true;

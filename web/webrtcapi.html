@@ -95,6 +95,16 @@
             margin-bottom: 2px;
             backdrop-filter: blur(2px);
         }
+        .chat-bubble.thinking, .chat-bubble.listening {
+            animation: pulse 1.5s infinite;
+            min-width: 80px;
+            text-align: center;
+        }
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
         .chat-message.user .chat-bubble {
             background: rgba(76,175,80,0.85);
             color: #fff;
@@ -274,6 +284,54 @@
         }
     };
 
+    // 状态显示控制
+    const statusDisplay = {     
+        showListening: function() {
+            loading.hide();
+            const chatContainer = document.getElementById('chat-container');
+            
+            // 移除现有的状态气泡
+            this.hideAll();
+            
+            // 创建新的听状态气泡
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'chat-message user';
+            const bubble = document.createElement('div');
+            bubble.className = 'chat-bubble listening';
+            bubble.textContent = '正在听...';
+            msgDiv.appendChild(bubble);
+            
+            // 追加到底部
+            chatContainer.appendChild(msgDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        },
+        
+        showThinking: function() {
+            loading.hide();
+            const chatContainer = document.getElementById('chat-container');
+            
+            // 移除现有的状态气泡
+            this.hideAll();
+            
+            // 创建新的思考状态气泡
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'chat-message bot';
+            const bubble = document.createElement('div');
+            bubble.className = 'chat-bubble thinking';
+            bubble.textContent = '思考中...';
+            msgDiv.appendChild(bubble);
+            
+            // 追加到底部
+            chatContainer.appendChild(msgDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        },
+        
+        hideAll: function() {
+            const chatContainer = document.getElementById('chat-container');
+            const existingBubbles = chatContainer.querySelectorAll('.chat-bubble.thinking, .chat-bubble.listening');
+            existingBubbles.forEach(bubble => bubble.parentElement.remove());
+        }
+    };
 
     // 聊天窗口
     function appendChatMessage(role, text) {
@@ -381,7 +439,7 @@
                 sendStatusMessage(true);
                 // 禁用打断按钮
                 document.getElementById('interruptBtn').disabled = true;
-                loading.display('正在听...');
+                statusDisplay.showListening();
             }
         } catch (error) {
             console.error('Error:', error);
