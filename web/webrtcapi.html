@@ -408,7 +408,7 @@
             });
         } catch (error) {
             console.error('Error:', error);
-            sendStatusMessage(false);
+            sendStatusMessage(true);
         }
     }
 
@@ -483,13 +483,13 @@
         return client;
     }
 
-    $(document).ready(function() {              // 初始化MQTT
-        client = initMqtt();
+    $(document).ready(function() {
         // 点击开始
         $('#startButton').click(function() {
-            start();
             // 隐藏开始按钮
             $(this).hide();
+            client = initMqtt();
+            start();            
             loading.display('请说【你好小白】唤醒');
         });
     });

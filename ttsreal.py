@@ -403,10 +403,10 @@ class TencentTTS(BaseTTS):
         self.secret_key = os.getenv("TENCENT_SECRET_KEY")
         self.secret_id = os.getenv("TENCENT_SECRET_ID")
         self.voice_type = int(opt.REF_FILE)
-        self.codec = "pcm"
+        self.codec = "wav"
         self.sample_rate = 16000
         self.volume = 0
-        self.speed = 0
+        self.speed = 1.2
     
     def __gen_signature(self, params):
         sort_dict = sorted(params.keys())
