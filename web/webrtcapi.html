@@ -446,26 +446,44 @@
         }
     }
 
-    // MQ订阅消息处理
-    function handleMqttMessage(topic, message) {
-        console.log('Received message:', message.toString(), 'on topic:', topic);
-        if (topic != 'llm/show') return;       
-        try {                          
-            const payload = JSON.parse(message.toString());
-            if(!payload.text) return;
-            // 检查状态是否存在
-            if (!stateContext.states[payload.command]) {
-                console.log('Unknown state command:', payload.command);
-                return;
+    // MQTT消息处理器
+    const mqttHandlers = {
+        // 原有的show消息处理
+        'llm/show': (message, client) => {
+            try {
+                const payload = JSON.parse(message.toString());
+                if(!payload.text) return;
+                // 检查状态是否存在
+                if (!stateContext.states[payload.command]) {
+                    console.log('Unknown state command:', payload.command);
+                    return;
+                }
+                requestId = payload.requestId;           
+                stateContext.handleState(payload);         
+            } catch (e) {
+                console.error('Error parsing MQTT message:', e);
             }
-            requestId = payload.requestId;           
-            stateContext.handleState(payload);         
-        } catch (e) {
-            console.error('Error parsing MQTT message:', e);
+        },
+        // 打断消息处理
+        'llm/show/shutup': (message) => {
+            try {
+                const payload = JSON.parse(message.toString());
+                if (payload.requestId) {
+                    console.log('收到打断消息:', payload);
+                    interruptDigitalHumanSpeak();
+                }
+            } catch (e) {
+                console.error('解析打断消息失败:', e);
+            }
         }
-    }
+    };
 
-    // 初始化MQTT连接
+    // MQTT订阅配置
+    const mqttSubscriptions = [
+        { topic: 'llm/show', qos: 2 },
+        { topic: 'llm/show/shutup', qos: 2 }
+    ];
+
     function initMqtt() {
         const client = mqtt.connect('ws://localhost:8083', {
             clientId: 'web_' + Math.random().toString(16).substr(2, 8),
@@ -474,14 +492,56 @@
             reconnectPeriod: 1000,
             protocol: 'ws'
         });
+
         client.on('connect', () => {
             console.log('Connected to MQTT broker');
-            client.subscribe('llm/show', { qos: 2 });
+            // 批量订阅所有topic
+            mqttSubscriptions.forEach(sub => {
+                client.subscribe(sub.topic, { qos: sub.qos });
+                console.log(`Subscribed to ${sub.topic}`);
+            });
         });
-        client.on('message', (topic, message) => handleMqttMessage(topic, message, client));
+
+        client.on('message', (topic, message) => {
+            // 根据topic找到对应的处理器
+            const handler = mqttHandlers[topic];
+            if (handler) {
+                handler(message, client);
+            } else {
+                console.warn(`No handler found for topic: ${topic}`);
+            }
+        });
+
         client.on('error', (err) => console.error('MQTT Error:', err));
         return client;
     }
+
+    // 添加WebRTC配置，优化面部清晰度
+    const rtcConfiguration = {
+        sdpSemantics: 'unified-plan',
+        bundlePolicy: 'max-bundle',
+        rtcpMuxPolicy: 'require',
+        iceTransportPolicy: 'all',
+        iceCandidatePoolSize: 0,
+        // 视频编码优化配置
+        codecs: {
+            video: {
+                codec: 'H264',
+                profileLevelId: '42e01f', // 使用高规格的H.264配置
+                packetizationMode: 1,
+                // 码率控制
+                maxBitrate: 4000000,     // 4Mbps，确保高质量
+                maxFramerate: 25,        // 与服务器端保持一致
+                minBitrate: 1500000,     // 1.5Mbps，保证基础清晰度
+                startBitrate: 2500000,   // 2.5Mbps，初始较高比特率
+                // 关键帧间隔设置
+                keyFrameInterval: 2,     // 每2秒一个关键帧
+                // 分辨率设置 - 使用设备实际分辨率
+                width: window.screen.width,
+                height: window.screen.height
+            }
+        }
+    };
 
     $(document).ready(function() {
         // 点击开始

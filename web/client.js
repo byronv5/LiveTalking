@@ -75,11 +75,8 @@ function negotiate() {
 }
 
 function start() {
-    var config = {
-        sdpSemantics: 'unified-plan'
-    };
-
-    pc = new RTCPeerConnection(config);
+    // 使用之前定义的rtcConfiguration
+    pc = new RTCPeerConnection(rtcConfiguration);
 
     // connect audio / video
     pc.addEventListener('track', (evt) => {
