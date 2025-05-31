@@ -452,7 +452,6 @@
         'llm/show': (message, client) => {
             try {
                 const payload = JSON.parse(message.toString());
-                if(!payload.text) return;
                 // 检查状态是否存在
                 if (!stateContext.states[payload.command]) {
                     console.log('Unknown state command:', payload.command);
