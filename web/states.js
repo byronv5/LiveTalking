@@ -78,7 +78,7 @@ class FocusStandbyState extends State {
 class StateContext {
     constructor() {
         this.isMoving = false;
-        this.isSaying = false;
+        this.canSpeak = false;
         this.states = {
             TASK_AWAKE: new TaskAwakeState(),
             TASK_MOVE: new TaskMoveState(),
@@ -96,7 +96,7 @@ class StateContext {
     handleState(payload) {
         const state = this.states[payload.command];
         this.isMoving = payload.command === 'TASK_MOVE' || payload.command === 'TASK_DIRECT';
-        this.isSaying = payload.command === 'TASK_LISTENING' || payload.command === 'TASK_AWAKE' || payload.command === 'CHAT_RESP' || payload.command === 'TASK_COMPLETE';
+        this.canSpeak = payload.command === 'TASK_LISTENING' || payload.command === 'TASK_AWAKE' || payload.command === 'CHAT_RESP' || payload.command === 'TASK_COMPLETE';
         state.do_next(payload.text);
     }
 }

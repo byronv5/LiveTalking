@@ -27,7 +27,7 @@ function negotiate() {
         }
         if (data.status === 'end') {
             sendStatusMessage(!stateContext.isMoving);           
-            if (stateContext.isSaying) {
+            if (stateContext.canSpeak) {
                 statusDisplay.showListening();
             }
             // 禁用打断按钮
