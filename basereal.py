@@ -35,7 +35,7 @@ import soundfile as sf
 import av
 from fractions import Fraction
 
-from ttsreal import EdgeTTS,SovitsTTS,XTTS,CosyVoiceTTS,FishTTS,TencentTTS
+from ttsreal import EdgeTTS,SovitsTTS,XTTS,CosyVoiceTTS,FishTTS,TencentTTS,DoubaoTTS
 from logger import logger
 
 from tqdm import tqdm
@@ -68,6 +68,8 @@ class BaseReal:
             self.tts = FishTTS(opt,self)
         elif opt.tts == "tencent":
             self.tts = TencentTTS(opt,self)
+        elif opt.tts == "doubao":
+            self.tts = DoubaoTTS(opt,self)
         else:
             logger.error(f"Unknown tts type: {opt.tts}")
         
