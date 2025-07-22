@@ -143,14 +143,12 @@ async def human(request):
     params = await request.json()
 
     sessionid = params.get('sessionid',0)
-    if params.get('interrupt'):
+    if params['type']=='interrupt':
         nerfreals[sessionid].flush_talk()
-
-    if params['type']=='echo':
+    elif params['type']=='echo':
         nerfreals[sessionid].put_msg_txt(params['text'])
     elif params['type']=='chat':
-        res=await asyncio.get_event_loop().run_in_executor(None, llm_response, params['text'],nerfreals[sessionid])                         
-        #nerfreals[sessionid].put_msg_txt(res)
+        await asyncio.get_event_loop().run_in_executor(None, llm_response, params['text'],nerfreals[sessionid])
 
     return web.Response(
         content_type="application/json",
