@@ -405,10 +405,10 @@ class TencentTTS(BaseTTS):
         self.secret_key = os.getenv("TENCENT_SECRET_KEY")
         self.secret_id = os.getenv("TENCENT_SECRET_ID")
         self.voice_type = int(opt.REF_FILE)
-        self.codec = "wav"
+        self.codec = "pcm"
         self.sample_rate = 16000
         self.volume = 0
-        self.speed = 1.2
+        self.speed = 0
     
     def __gen_signature(self, params):
         sort_dict = sorted(params.keys())
@@ -480,7 +480,7 @@ class TencentTTS(BaseTTS):
                         rsp = json.loads(chunk)
                         #response["Code"] = rsp["Response"]["Error"]["Code"]
                         #response["Message"] = rsp["Response"]["Error"]["Message"]
-                        logger.error("tencent tts:%s",rsp["Response"]["Error"]["Message"])
+                        logger.error("tencent tts full response: %s", rsp)
                         return
                     except:
                         end = time.perf_counter()
