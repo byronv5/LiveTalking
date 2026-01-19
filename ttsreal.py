@@ -46,6 +46,11 @@ if TYPE_CHECKING:
     from basereal import BaseReal
 
 from logger import logger
+from protocols import (
+    MsgType, EventType, Message, 
+    receive_message, full_client_request
+)
+
 class State(Enum):
     RUNNING=0
     PAUSE=1
@@ -631,6 +636,125 @@ class DoubaoTTS(BaseTTS):
                 #stream = resampy.resample(x=stream, sr_orig=24000, sr_new=self.sample_rate)
                 # byte_stream=BytesIO(buffer)
                 # stream = self.__create_bytes_stream(byte_stream)
+                streamlen = stream.shape[0]
+                idx = 0
+                while streamlen >= self.chunk:
+                    eventpoint = None
+                    if first:
+                        eventpoint = {'status': 'start', 'text': text, 'msgenvent': textevent}
+                        first = False
+                    self.parent.put_audio_frame(stream[idx:idx + self.chunk], eventpoint)
+                    streamlen -= self.chunk
+                    idx += self.chunk
+                last_stream = stream[idx:] #get the remain stream
+        eventpoint = {'status': 'end', 'text': text, 'msgenvent': textevent}
+        self.parent.put_audio_frame(np.zeros(self.chunk, np.float32), eventpoint)
+
+###########################################################################################
+
+class DoubaoTTSV3(BaseTTS):
+    """火山引擎 v3 接口 TTS 实现"""
+    
+    @staticmethod
+    def get_resource_id(voice: str) -> str:
+        """根据音色类型获取资源ID"""
+        if voice.startswith("S_"):
+            return "volc.megatts.default"
+        return "volc.service_type.10029"
+    
+    def __init__(self, opt, parent):
+        super().__init__(opt, parent)
+        # 从配置中读取火山引擎 v3 接口参数
+        self.appid = os.getenv("DOUBAO_APPID")
+        self.access_key = os.getenv("DOUBAO_TOKEN")
+        self.resource_id = os.getenv("DOUBAO_RESOURCE_ID")
+        _host = "openspeech.bytedance.com"
+        # v3 接口
+        self.api_url = f"wss://{_host}/api/v3/tts/unidirectional/stream"
+
+    async def doubao_voice(self, text): # -> Iterator[bytes]:
+        # 首帧处理
+        first_chunk = True
+        start = time.perf_counter()
+        voice_type = self.opt.REF_FILE 
+
+        try:
+            # 准备请求头部
+            headers = {
+                "X-Api-App-Key": self.appid,
+                "X-Api-Access-Key": self.access_key,
+                "X-Api-Resource-Id": (
+                    self.resource_id if self.resource_id else self.get_resource_id(voice_type)
+                ),
+                "X-Api-Connect-Id": str(uuid.uuid4()),
+            }
+
+            # 准备请求体
+            request = {
+                "user": {
+                    "uid": str(self.parent.sessionid),
+                },
+                "req_params": {
+                    "speaker": voice_type,
+                    "audio_params": {
+                        "format": "pcm",  # 使用 pcm 格式
+                        "sample_rate": 16000,  # 匹配 BaseTTS 的 sample_rate
+                        "enable_timestamp": True,
+                    },
+                    "text": text,
+                    "additions": json.dumps({
+                        "disable_markdown_filter": False,
+                    }),
+                },
+            }
+            
+            async with websockets.connect(
+                self.api_url, 
+                extra_headers=headers, 
+                ping_interval=None,
+                max_size=10 * 1024 * 1024
+            ) as ws:
+                # 发送请求
+                await full_client_request(ws, json.dumps(request).encode('utf-8'))
+                
+                # 接收音频数据
+                while True:
+                    msg = await receive_message(ws)
+                    
+                    if msg.type == MsgType.FullServerResponse:
+                        if msg.event == EventType.SessionFinished:
+                            break
+                    elif msg.type == MsgType.AudioOnlyServer:
+                        if msg.payload and len(msg.payload) > 0:
+                            if first_chunk:
+                                end = time.perf_counter()
+                                logger.info(f"doubaov3 tts Time to first chunk: {end-start}s")
+                                first_chunk = False
+                            yield msg.payload
+                    else:
+                        logger.warning(f"Unknown message type: {msg.type}")
+                        break
+                        
+        except Exception as e:
+            logger.exception('doubaov3')
+
+    def txt_to_audio(self, msg):
+        text, textevent = msg
+        asyncio.new_event_loop().run_until_complete(
+            self.stream_tts(
+                self.doubao_voice(text),
+                msg
+            )
+        )
+
+    async def stream_tts(self, audio_stream, msg):
+        text, textevent = msg
+        first = True
+        last_stream = np.array([],dtype=np.float32)
+        async for chunk in audio_stream:
+            if chunk is not None and len(chunk) > 0:
+                stream = np.frombuffer(chunk, dtype=np.int16).astype(np.float32) / 32767
+                stream = np.concatenate((last_stream,stream))
                 streamlen = stream.shape[0]
                 idx = 0
                 while streamlen >= self.chunk:

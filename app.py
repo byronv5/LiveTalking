@@ -139,6 +139,27 @@ async def offer(request):
         ),
     )
 
+def split_text_by_punctuation(text: str, min_length: int = 10):
+    """按标点符号智能分段文本，用于优化TTS播放体验"""
+    if not text:
+        return []
+    
+    segments = []
+    result = ""
+    
+    for i, char in enumerate(text):
+        result += char
+        # 遇到标点符号且累积长度超过阈值时分段
+        if char in ",.!;:，。！？：；\n" and len(result) >= min_length:
+            segments.append(result)
+            result = ""
+    
+    # 添加剩余文本
+    if result:
+        segments.append(result)
+    
+    return segments
+
 async def human(request):
     params = await request.json()
 
@@ -146,7 +167,18 @@ async def human(request):
     if params['type']=='interrupt':
         nerfreals[sessionid].flush_talk()
     elif params['type']=='echo':
-        nerfreals[sessionid].put_msg_txt(params['text'])
+        text = params['text']
+        # 判断是否需要分段（文本长度超过50字符时启用分段优化）
+        enable_split = params.get('split', True)  # 默认开启分段
+        
+        if enable_split and len(text) > 50:
+            # 智能分段，降低延迟，提升体验
+            segments = split_text_by_punctuation(text, min_length=5)
+            for segment in segments:
+                nerfreals[sessionid].put_msg_txt(segment)
+        else:
+            # 短文本直接发送
+            nerfreals[sessionid].put_msg_txt(text)
     elif params['type']=='chat':
         await asyncio.get_event_loop().run_in_executor(None, llm_response, params['text'],nerfreals[sessionid])
 
