@@ -696,6 +696,7 @@ class DoubaoTTSV3(BaseTTS):
                 },
                 "req_params": {
                     "speaker": voice_type,
+                    "model": "seed-tts-1.1",
                     "audio_params": {
                         "format": "pcm",  # 使用 pcm 格式
                         "sample_rate": 16000,  # 匹配 BaseTTS 的 sample_rate
@@ -703,7 +704,11 @@ class DoubaoTTSV3(BaseTTS):
                     },
                     "text": text,
                     "additions": json.dumps({
-                        "disable_markdown_filter": False,
+                        "disable_markdown_filter": True, 
+                        "cache_config": {
+                            "text_type": 1,
+                            "use_cache": True,
+                        }
                     }),
                 },
             }
