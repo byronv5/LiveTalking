@@ -554,7 +554,8 @@ class DoubaoTTS(BaseTTS):
                 "reqid": "xxx",
                 "text": "字节跳动语音合成。",
                 "text_type": "plain",
-                "operation": "xxx"
+                "operation": "xxx",
+                "extra_param": json.dumps({"cache_config": {"text_type": 1,"use_cache": True}})
             }
         }
 
