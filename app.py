@@ -49,7 +49,7 @@ import shutil
 import asyncio
 import torch
 from io import BytesIO
-from typing import Dict
+from typing import Callable, Dict, Optional, Any
 from utils.logger import logger
 import copy
 import gc
@@ -60,6 +60,41 @@ app = Flask(__name__)
 opt = None
 model = None
 global_avatars = {} # avatar_id: payload
+AVATARS_ROOT = os.path.join('data', 'avatars')
+load_avatar: Optional[Callable[[str], Any]] = None
+
+
+def get_or_load_avatar(avatar_id: str):
+    """从 global_avatars 获取形象；不存在则 load_avatar 后缓存。"""
+    if avatar_id in global_avatars:
+        return global_avatars[avatar_id]
+    avatar_path = os.path.join(AVATARS_ROOT, avatar_id)
+    if not os.path.isdir(avatar_path):
+        logger.warning('avatar not found: %s', avatar_id)
+        return None
+    if load_avatar is None:
+        logger.error('load_avatar not initialized')
+        return None
+    try:
+        global_avatars[avatar_id] = load_avatar(avatar_id)
+        logger.info('loaded avatar into cache: %s', avatar_id)
+        return global_avatars[avatar_id]
+    except Exception:
+        logger.exception('failed to load avatar %s', avatar_id)
+        return None
+
+
+def preload_avatars_by_prefix(base_id: str) -> None:
+    """预加载 base_id 及 base_id_* 目录下的形象到 global_avatars。"""
+    if not os.path.isdir(AVATARS_ROOT):
+        return
+    for name in sorted(os.listdir(AVATARS_ROOT)):
+        path = os.path.join(AVATARS_ROOT, name)
+        if not os.path.isdir(path):
+            continue
+        if name == base_id or name.startswith(f'{base_id}_'):
+            get_or_load_avatar(name)
+
         
 
 #####webrtc###############################
@@ -76,17 +111,12 @@ def build_avatar_session(sessionid:str, params:dict)->BaseAvatar:
     opt_this = copy.deepcopy(opt)
     opt_this.sessionid = sessionid
 
-    avatar_id = params.get('avatar',opt.avatar_id) 
+    avatar_id = params.get('avatar', opt.avatar_id)
     opt_this.avatar_id = avatar_id
-    ref_audio = params.get('refaudio','') #音色
-    ref_text = params.get('reftext','')
-    if (avatar_id and avatar_id != opt.avatar_id):
-        # Avoid reloading if already cached globally
-        if avatar_id not in global_avatars:
-            global_avatars[avatar_id] = load_avatar(avatar_id)
-        avatar_this = global_avatars[avatar_id]
-    else:
-        # Default avatar loaded at startup
+    ref_audio = params.get('refaudio', '')  # 音色
+    ref_text = params.get('reftext', '')
+    avatar_this = get_or_load_avatar(avatar_id)
+    if avatar_this is None:
         avatar_this = global_avatars.get(opt.avatar_id)
     if ref_audio: #请求参数配置了参考音频
         opt_this.REF_FILE = ref_audio
@@ -96,6 +126,8 @@ def build_avatar_session(sessionid:str, params:dict)->BaseAvatar:
         opt_this.customopt = json.loads(custom_config)
 
     avatar_session = registry.create("avatar", opt.model, opt=opt_this, model=model, avatar=avatar_this)
+    avatar_session.set_avatar_resolver(get_or_load_avatar)
+    avatar_session.current_avatar_id = opt_this.avatar_id
     return avatar_session
 
 async def offer(request):
@@ -138,16 +170,19 @@ def main():
 
     if opt.model == 'musetalk':
         model = load_model()
-        global_avatars[opt.avatar_id] = load_avatar(opt.avatar_id) 
-        warm_up(opt.batch_size,model)      
+        get_or_load_avatar(opt.avatar_id)
+        preload_avatars_by_prefix(opt.avatar_id)
+        warm_up(opt.batch_size, model)
     elif opt.model == 'wav2lip':
         model = load_model("./models/wav2lip.pth")
-        global_avatars[opt.avatar_id] = load_avatar(opt.avatar_id)
-        warm_up(opt.batch_size,model,256)
+        get_or_load_avatar(opt.avatar_id)
+        preload_avatars_by_prefix(opt.avatar_id)
+        warm_up(opt.batch_size, model, 256)
     elif opt.model == 'ultralight':
         model = load_model(opt)
-        global_avatars[opt.avatar_id] = load_avatar(opt.avatar_id)
-        warm_up(opt.batch_size,global_avatars[opt.avatar_id],160)
+        get_or_load_avatar(opt.avatar_id)
+        preload_avatars_by_prefix(opt.avatar_id)
+        warm_up(opt.batch_size, global_avatars[opt.avatar_id], 160)
 
     # init rtc manager
     session_manager.init_builder(build_avatar_session)

@@ -56,6 +56,8 @@ async def human(request):
         datainfo = {}
         if params.get('tts'):  # tts 参数透传（voice, emotion 等）
             datainfo['tts'] = params.get('tts')
+        if params.get('avatar_id'):
+            datainfo['avatar_id'] = params.get('avatar_id')
 
         if params['type'] == 'echo':
             avatar_session.put_msg_txt(params['text'], datainfo)

@@ -60,6 +60,7 @@ POST /human
 | `type` | 是 | string | — | `echo`: 直接复读; `chat`: 触发 LLM 回答 |
 | `interrupt` | 否 | bool | false | 是否打断当前播报 |
 | `tts` | 否 | object | — | 透传给 TTS 的配置（如 `voice`, `emotion`） |
+| `avatar_id` | 否 | string | — | 本句播报使用的形象 ID（`data/avatars/<avatar_id>/` 须存在）；未传或不存在则沿用当前形象 |
 
 **响应**:
 

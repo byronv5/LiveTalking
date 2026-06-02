@@ -122,11 +122,18 @@ class MuseReal(BaseAvatar):
 
         self.vae, self.unet, self.pe, self.timesteps, self.audio_processor = model
 
-        self.frame_list_cycle,self.mask_list_cycle,self.coord_list_cycle,self.mask_coords_list_cycle, self.input_latent_list_cycle = avatar
-
-        self.asr = WhisperASR(opt,self,self.audio_processor)
+        self.asr = WhisperASR(opt, self, self.audio_processor)
+        self.apply_avatar(avatar)
         self.asr.warm_up()
-    
+
+    def apply_avatar(self, avatar_bundle):
+        (
+            self.frame_list_cycle,
+            self.mask_list_cycle,
+            self.coord_list_cycle,
+            self.mask_coords_list_cycle,
+            self.input_latent_list_cycle,
+        ) = avatar_bundle
 
     def inference_batch(self, index, audiofeat_batch):
         # 这里的 index 是针对当前 avatar 的索引

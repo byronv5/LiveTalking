@@ -50,6 +50,12 @@ class BaseASR:
     def flush_talk(self):
         self.queue.queue.clear()
 
+    def reset_buffers(self):
+        """句间切换形象时复位滑动窗口，避免上一句音频特征污染。"""
+        self.queue.queue.clear()
+        self.frames = []
+        self.warm_up()
+
     def put_audio_frame(self,audio_chunk:NDArray[np.float32],datainfo:dict): #16khz 20ms pcm
         self.queue.put(AudioFrameData(data=audio_chunk,type=0,userdata=datainfo))
 

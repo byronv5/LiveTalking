@@ -135,11 +135,15 @@ class LightReal(BaseAvatar):
         # self.idx = 0
         # self.res_frame_queue = Queue(self.batch_size*2)
 
-        audio_processor,_ = model
-        self.model,self.frame_list_cycle,self.face_list_cycle,self.coord_list_cycle = avatar
+        audio_processor, _ = model
+        self.audio_processor = audio_processor
+        self.apply_avatar(avatar)
 
-        self.asr = HubertASR(opt,self,audio_processor,audio_feat_length=[4,4])
+        self.asr = HubertASR(opt, self, audio_processor, audio_feat_length=[4, 4])
         self.asr.warm_up()
+
+    def apply_avatar(self, avatar_bundle):
+        self.model, self.frame_list_cycle, self.face_list_cycle, self.coord_list_cycle = avatar_bundle
 
     def inference_batch(self, index, audiofeat_batch):
         # 这里的 index 是针对当前 avatar 的索引

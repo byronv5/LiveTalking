@@ -109,11 +109,13 @@ class LipReal(BaseAvatar):
         # self.res_frame_queue = Queue(self.batch_size*2)
         self.model = model
 
-        self.frame_list_cycle,self.face_list_cycle,self.coord_list_cycle = avatar
-
-        self.asr = MelASR(opt,self)
+        self.asr = MelASR(opt, self)
+        self.apply_avatar(avatar)
         self.asr.warm_up()
-    
+
+    def apply_avatar(self, avatar_bundle):
+        self.frame_list_cycle, self.face_list_cycle, self.coord_list_cycle = avatar_bundle
+
     def inference_batch(self, index, audiofeat_batch):
         # 这里的 index 是针对当前 avatar 的索引
         # 返回一个 batch 的推理结果，batch 大小由 self.batch_size 决定

@@ -30,7 +30,8 @@ import glob
 import resampy
 import queue
 from queue import Queue
-from threading import Thread, Event
+from threading import Thread, Event, Lock
+from typing import Any, Callable, Optional
 from io import BytesIO
 import soundfile as sf
 import asyncio
@@ -84,6 +85,10 @@ class BaseAvatar:
         self.batch_size = opt.batch_size
         self.res_frame_queue = Queue(self.batch_size*2)
         self.render_event = Event()
+        self.render_index = 0
+        self.current_avatar_id = getattr(opt, 'avatar_id', '')
+        self._avatar_lock = Lock()
+        self._avatar_resolver: Optional[Callable[[str], Any]] = None
 
         _tts_modules = {
             'edgetts': 'tts.edge',
@@ -121,8 +126,50 @@ class BaseAvatar:
         else:
             logger.error(f"Output transport {opt.transport} not found in map.")
 
+    def set_avatar_resolver(self, resolver: Callable[[str], Any]) -> None:
+        self._avatar_resolver = resolver
+
+    def apply_avatar(self, avatar_bundle: Any) -> None:
+        raise NotImplementedError
+
+    def _drain_queue(self, q: Queue) -> None:
+        while True:
+            try:
+                q.get_nowait()
+            except queue.Empty:
+                break
+
+    def _reset_pipeline_state(self) -> None:
+        with self._avatar_lock:
+            self.render_index = 0
+        if hasattr(self, 'asr') and hasattr(self.asr, 'reset_buffers'):
+            self.asr.reset_buffers()
+        if hasattr(self, 'asr') and hasattr(self.asr, 'feat_queue'):
+            self._drain_queue(self.asr.feat_queue)
+        self._drain_queue(self.res_frame_queue)
+
+    def try_swap_avatar(self, avatar_id: str) -> bool:
+        if not avatar_id or avatar_id == self.current_avatar_id:
+            return False
+        if self._avatar_resolver is None:
+            logger.warning('avatar resolver not set, cannot swap to %s', avatar_id)
+            return False
+        bundle = self._avatar_resolver(avatar_id)
+        if bundle is None:
+            logger.warning('avatar_id %s not available, keep current %s', avatar_id, self.current_avatar_id)
+            return False
+        with self._avatar_lock:
+            self.apply_avatar(bundle)
+            self.current_avatar_id = avatar_id
+        self._reset_pipeline_state()
+        logger.info('swapped avatar to %s for session %s', avatar_id, self.sessionid)
+        return True
+
     # 如果系统没有使用 pipeline，或者为了向后兼容原来的 ttsreal.py
-    def put_msg_txt(self, msg, datainfo:dict={}):
+    def put_msg_txt(self, msg, datainfo: dict = {}):
+        avatar_id = datainfo.get('avatar_id')
+        if avatar_id:
+            self.try_swap_avatar(avatar_id)
         if hasattr(self, 'tts'):
             self.tts.put_msg_txt(msg, datainfo)
     
@@ -314,15 +361,10 @@ class BaseAvatar:
         return 1
         
     def inference(self, quit_event):
-        length = self.get_avatar_length()
-        index = 0
         count = 0
         counttime = 0
         last_speaking = False
 
-        # syncnet_T = 12  # 时间步
-        # weight_dtype = torch.float16  # 数据类型
-        # infernum = 0
         logger.info('start inference')
         while not quit_event.is_set():
             starttime = time.perf_counter()
@@ -331,25 +373,28 @@ class BaseAvatar:
                 audiofeat_batch = self.asr.feat_queue.get(block=True, timeout=1)
             except queue.Empty:
                 continue
-                
+
+            with self._avatar_lock:
+                length = self.get_avatar_length()
+                index = self.render_index
+
             is_all_silence = True
             audio_frames: list[AudioFrameData] = []
             for _ in range(self.batch_size * 2):
-                audioframe:AudioFrameData = self.asr.output_queue.get()
+                audioframe: AudioFrameData = self.asr.output_queue.get()
                 if audioframe.type == 0:
-                    is_all_silence = False               
+                    is_all_silence = False
                 audio_frames.append(audioframe)
 
-             # 检测状态变化
             current_speaking = not is_all_silence
 
-            if is_all_silence: #全为静音数据，只需要取fullimg，不需要推理
+            if is_all_silence:
                 for i in range(self.batch_size):
                     idx = mirror_index(length, index)
-                    self.res_frame_queue.put((None, audio_frames[i*2:i*2+2], idx))
-                    index = index + 1
+                    self.res_frame_queue.put((None, audio_frames[i * 2:i * 2 + 2], idx))
+                    index += 1
             else:
-                if current_speaking and not last_speaking and self.custom_index.get(1) is not None: #从静音到说话切换,并且有自定义静态视频
+                if current_speaking and not last_speaking and self.custom_index.get(1) is not None:
                     index = 0
                 t = time.perf_counter()
 
@@ -362,12 +407,20 @@ class BaseAvatar:
                     count = 0
                     counttime = 0
                 for i, res_frame in enumerate(pred):
-                    self.res_frame_queue.put((res_frame, audio_frames[i*2:i*2+2], mirror_index(length, index)))
-                    index = index + 1
-                    
+                    self.res_frame_queue.put(
+                        (res_frame, audio_frames[i * 2:i * 2 + 2], mirror_index(length, index))
+                    )
+                    index += 1
+
+            with self._avatar_lock:
+                self.render_index = index
+
             if current_speaking != last_speaking:
-                logger.info(f"inference 状态切换：{'说话' if last_speaking else '静音'} → {'说话' if current_speaking else '静音'}")
-                last_speaking = current_speaking         
+                logger.info(
+                    f"inference 状态切换：{'说话' if last_speaking else '静音'} → "
+                    f"{'说话' if current_speaking else '静音'}"
+                )
+                last_speaking = current_speaking
         logger.info('baseavatar inference thread stop')
 
     def process_frames(self,quit_event):
