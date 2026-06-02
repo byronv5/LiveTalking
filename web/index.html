@@ -261,9 +261,39 @@ function negotiate() {
         return pc.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: answer.sdp }));
     }).catch(e => console.error('Negotiation error:', e));
 }
-
+// 添加WebRTC配置，优化面部清晰度
+const rtcConfiguration = {
+    sdpSemantics: 'unified-plan',
+    bundlePolicy: 'max-bundle',
+    rtcpMuxPolicy: 'require',
+    iceTransportPolicy: 'all',
+    iceCandidatePoolSize: 0,
+    // 视频编码优化配置
+    codecs: {
+        video: {
+            codec: 'H264',
+            profileLevelId: '42e01f', // 使用高规格的H.264配置
+            packetizationMode: 1,
+            // 码率控制
+            maxBitrate: 4000000,     // 4Mbps，确保高质量
+            maxFramerate: 25,        // 与服务器端保持一致
+            minBitrate: 1500000,     // 1.5Mbps，保证基础清晰度
+            startBitrate: 2500000,   // 2.5Mbps，初始较高比特率
+            // 关键帧间隔设置
+            keyFrameInterval: 2,     // 每2秒一个关键帧
+            // 分辨率设置 - 使用设备实际分辨率
+            width: window.screen.width,
+            height: window.screen.height
+        }
+    }
+};
 function start() {
-    const config = { sdpSemantics: 'unified-plan' };
+    const config = rtcConfiguration;
+    config.iceServers =[{ 
+        urls: 'turn:yourip:3478?transport=udp', 
+        username: 'yourusername', 
+        credential: 'yourpassword'  
+    }];
     if (document.getElementById('use-stun')?.checked) {
         config.iceServers = [{ urls: 'stun:stun.l.google.com:19302' }];
     }
