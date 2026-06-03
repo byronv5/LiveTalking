@@ -86,7 +86,8 @@ class BaseAvatar:
         self.res_frame_queue = Queue(self.batch_size*2)
         self.render_event = Event()
         self.render_index = 0
-        self.current_avatar_id = getattr(opt, 'avatar_id', '')
+        self.default_avatar_id = getattr(opt, 'avatar_id', '')
+        self.current_avatar_id = self.default_avatar_id
         self._avatar_lock = Lock()
         self._avatar_resolver: Optional[Callable[[str], Any]] = None
 
@@ -165,6 +166,12 @@ class BaseAvatar:
         logger.info('swapped avatar to %s for session %s', avatar_id, self.sessionid)
         return True
 
+    def _revert_to_default_avatar(self) -> None:
+        """动作形象播报结束或被打断后，切回会话默认 avatar_id。"""
+        if self.current_avatar_id == self.default_avatar_id:
+            return
+        self.try_swap_avatar(self.default_avatar_id)
+
     # 如果系统没有使用 pipeline，或者为了向后兼容原来的 ttsreal.py
     def put_msg_txt(self, msg, datainfo: dict = {}):
         avatar_id = datainfo.get('avatar_id')
@@ -232,7 +239,8 @@ class BaseAvatar:
             self.tts.flush_talk()
         if hasattr(self, 'asr') and hasattr(self.asr, 'flush_talk'):
             self.asr.flush_talk()
-        self.custom_audiotype = 0  
+        self.custom_audiotype = 0
+        self._revert_to_default_avatar()
 
     # def flush(self):
     #     self.flush_talk()
@@ -264,6 +272,14 @@ class BaseAvatar:
     def notify(self, eventpoint:dict):
         if eventpoint and eventpoint.get('status'):
             logger.info("notify:%s", eventpoint)
+        if not eventpoint or eventpoint.get('status') != 'end':
+            return
+        action_id = eventpoint.get('avatar_id')
+        if not action_id or action_id == self.default_avatar_id:
+            return
+        if self.current_avatar_id != action_id:
+            return
+        self._revert_to_default_avatar()
 
     def start_recording(self):
         if self.recording:
