@@ -303,7 +303,8 @@ function start() {
     eventChannel.addEventListener('message', evt => {
         const msg = JSON.parse(evt.data);
         if (msg.type !== 'speaking') return;
-        pc.dispatchEvent(new CustomEvent(msg.speaking ? 'speakingstart' : 'speakingend'));
+        const detail = { text: msg.text || '' };
+        pc.dispatchEvent(new CustomEvent(msg.speaking ? 'speakingstart' : 'speakingend', { detail }));
     });
     pc.addEventListener('track', evt => {
         if (evt.track.kind === 'video') document.getElementById('video').srcObject = evt.streams[0];
@@ -313,8 +314,8 @@ function start() {
         if (pc.connectionState === 'connected') updateStatus(true);
         else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') { updateStatus(false); setSessionId(null); }
     });
-    pc.addEventListener('speakingstart', () => console.log('数字人开始说话'));
-    pc.addEventListener('speakingend', () => console.log('数字人结束说话'));
+    pc.addEventListener('speakingstart', e => console.log('数字人开始说话', e.detail.text));
+    pc.addEventListener('speakingend', e => console.log('数字人结束说话', e.detail.text));
     negotiate();
     document.getElementById('btnStart').style.display = 'none';
     document.getElementById('btnStop').style.display = 'inline-block';

@@ -69,7 +69,8 @@ class BaseAvatar:
         self.sessionid = self.opt.sessionid
 
         self.speaking = False
-        self._on_speaking_change: Optional[Callable[[bool], None]] = None
+        self._on_speaking_change: Optional[Callable[[bool, Optional[str]], None]] = None
+        self._current_speaking_text: Optional[str] = None
         self.recording = False
         self._record_video_pipe = None
         self._record_audio_pipe = None
@@ -249,12 +250,21 @@ class BaseAvatar:
     def is_speaking(self) -> bool:
         return self.speaking
 
-    def set_on_speaking_change(self, callback: Optional[Callable[[bool], None]]) -> None:
+    def set_on_speaking_change(self, callback: Optional[Callable[[bool, Optional[str]], None]]) -> None:
         self._on_speaking_change = callback
 
+    def _update_speaking_text(self, audio_frames: list[AudioFrameData]) -> None:
+        for frame in audio_frames:
+            text = frame.userdata.get('text')
+            if text:
+                self._current_speaking_text = text
+
     def _emit_speaking_change(self, speaking: bool) -> None:
-        if self._on_speaking_change:
-            self._on_speaking_change(speaking)
+        if not self._on_speaking_change:
+            return
+        self._on_speaking_change(speaking, self._current_speaking_text)
+        if not speaking:
+            self._current_speaking_text = None
     
     def __loadcustom(self):
         if not hasattr(self.opt, 'customopt') or not self.opt.customopt:
@@ -438,6 +448,8 @@ class BaseAvatar:
 
             with self._avatar_lock:
                 self.render_index = index
+
+            self._update_speaking_text(audio_frames)
 
             if current_speaking != last_speaking:
                 logger.info(

@@ -26,15 +26,15 @@ from server.session_manager import session_manager
 SPEAKING_EVENT_CHANNEL = "livetalking"
 
 
-def _send_speaking_event(channel, speaking: bool) -> None:
+def _send_speaking_event(channel, speaking: bool, text: Optional[str] = None) -> None:
     if channel.readyState != "open":
         return
-    channel.send(json.dumps({"type": "speaking", "speaking": speaking}))
+    channel.send(json.dumps({"type": "speaking", "speaking": speaking, "text": text or ""}))
 
 
 def _make_speaking_callback(channel, loop):
-    def callback(speaking: bool) -> None:
-        loop.call_soon_threadsafe(_send_speaking_event, channel, speaking)
+    def callback(speaking: bool, text: Optional[str] = None) -> None:
+        loop.call_soon_threadsafe(_send_speaking_event, channel, speaking, text)
     return callback
 
 
