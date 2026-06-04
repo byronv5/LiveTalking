@@ -217,6 +217,7 @@
 <script>
 let pc = null;
 let sessionid = null;
+let eventChannel = null;
 
 function updateStatus(connected) {
     const badge = document.getElementById('statusBadge');
@@ -298,6 +299,12 @@ function start() {
         config.iceServers = [{ urls: 'stun:stun.l.google.com:19302' }];
     }
     pc = new RTCPeerConnection(config);
+    eventChannel = pc.createDataChannel('livetalking');
+    eventChannel.addEventListener('message', evt => {
+        const msg = JSON.parse(evt.data);
+        if (msg.type !== 'speaking') return;
+        pc.dispatchEvent(new CustomEvent(msg.speaking ? 'speakingstart' : 'speakingend'));
+    });
     pc.addEventListener('track', evt => {
         if (evt.track.kind === 'video') document.getElementById('video').srcObject = evt.streams[0];
         else document.getElementById('audio').srcObject = evt.streams[0];
@@ -306,12 +313,15 @@ function start() {
         if (pc.connectionState === 'connected') updateStatus(true);
         else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') { updateStatus(false); setSessionId(null); }
     });
+    pc.addEventListener('speakingstart', () => console.log('数字人开始说话'));
+    pc.addEventListener('speakingend', () => console.log('数字人结束说话'));
     negotiate();
     document.getElementById('btnStart').style.display = 'none';
     document.getElementById('btnStop').style.display = 'inline-block';
 }
 
 function stop() {
+    if (eventChannel) { eventChannel.close(); eventChannel = null; }
     if (pc) { pc.close(); pc = null; }
     updateStatus(false);
     setSessionId(null);

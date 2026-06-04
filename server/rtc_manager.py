@@ -23,6 +23,25 @@ from utils.logger import logger
 
 from server.session_manager import session_manager
 
+SPEAKING_EVENT_CHANNEL = "livetalking"
+
+
+def _send_speaking_event(channel, speaking: bool) -> None:
+    if channel.readyState != "open":
+        return
+    channel.send(json.dumps({"type": "speaking", "speaking": speaking}))
+
+
+def _make_speaking_callback(channel, loop):
+    def callback(speaking: bool) -> None:
+        loop.call_soon_threadsafe(_send_speaking_event, channel, speaking)
+    return callback
+
+
+def _bind_speaking_channel(avatar_session, channel, loop) -> None:
+    avatar_session.set_on_speaking_change(_make_speaking_callback(channel, loop))
+
+
 class RTCManager:
     """
     WebRTC 连接管理器。
@@ -68,6 +87,7 @@ class RTCManager:
         async def on_connectionstatechange():
             logger.info("Connection state is %s", pc.connectionState)
             if pc.connectionState in ("failed", "closed"):
+                avatar_session.set_on_speaking_change(None)
                 await pc.close()
                 self.pcs.discard(pc)
                 session_manager.remove_session(sessionid)
@@ -77,6 +97,27 @@ class RTCManager:
         player = HumanPlayer(avatar_session)
         pc.addTrack(player.audio)
         pc.addTrack(player.video)
+
+        loop = asyncio.get_event_loop()
+
+        @pc.on("datachannel")
+        async def on_datachannel(channel):
+            if channel.label != SPEAKING_EVENT_CHANNEL:
+                return
+
+            def bind_channel() -> None:
+                _bind_speaking_channel(avatar_session, channel, loop)
+
+            if channel.readyState == "open":
+                bind_channel()
+            else:
+                @channel.on("open")
+                async def on_channel_open():
+                    bind_channel()
+
+            @channel.on("close")
+            async def on_channel_close():
+                avatar_session.set_on_speaking_change(None)
 
         # 设置编解码器偏好
         capabilities = RTCRtpSender.getCapabilities("video")

@@ -69,6 +69,7 @@ class BaseAvatar:
         self.sessionid = self.opt.sessionid
 
         self.speaking = False
+        self._on_speaking_change: Optional[Callable[[bool], None]] = None
         self.recording = False
         self._record_video_pipe = None
         self._record_audio_pipe = None
@@ -247,6 +248,13 @@ class BaseAvatar:
 
     def is_speaking(self) -> bool:
         return self.speaking
+
+    def set_on_speaking_change(self, callback: Optional[Callable[[bool], None]]) -> None:
+        self._on_speaking_change = callback
+
+    def _emit_speaking_change(self, speaking: bool) -> None:
+        if self._on_speaking_change:
+            self._on_speaking_change(speaking)
     
     def __loadcustom(self):
         if not hasattr(self.opt, 'customopt') or not self.opt.customopt:
@@ -436,6 +444,7 @@ class BaseAvatar:
                     f"inference 状态切换：{'说话' if last_speaking else '静音'} → "
                     f"{'说话' if current_speaking else '静音'}"
                 )
+                self._emit_speaking_change(current_speaking)
                 last_speaking = current_speaking
         logger.info('baseavatar inference thread stop')
 
